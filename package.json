@@ -1,0 +1,42 @@
+{
+  "name": "etic",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Modern E-Commerce SaaS Platform - Shopify/ikas alternative",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "db:generate": "pnpm --filter database db:generate",
+    "db:push": "pnpm --filter database db:push",
+    "db:migrate": "pnpm --filter database db:migrate",
+    "db:studio": "pnpm --filter database db:studio"
+  },
+  "keywords": [
+    "e-commerce",
+    "saas",
+    "multi-tenant",
+    "shopify-alternative",
+    "online-store"
+  ],
+  "author": "ETIC Team",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "prettier": "^3.2.4",
+    "turbo": "^1.12.0",
+    "typescript": "^5.3.3"
+  }
+}
