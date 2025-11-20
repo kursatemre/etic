@@ -9,7 +9,20 @@
       "Bash(pnpm dev)",
       "Bash(pnpm next dev:*)",
       "Bash(timeout 5 bash:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(docker --version:*)",
+      "Bash(docker run:*)",
+      "Bash(docker rm:*)",
+      "Bash(docker exec:*)",
+      "Bash(pnpm prisma migrate dev:*)",
+      "Bash(docker inspect:*)",
+      "Bash(pnpm db:seed:*)",
+      "Bash(pnpm prisma migrate deploy:*)",
+      "Bash(pnpm --filter api dev:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(pnpm prisma db seed:*)"
     ],
     "deny": [],
     "ask": []

@@ -8,14 +8,14 @@ import {
 } from '../controllers/category.controller'
 import { authenticate, requireStoreAccess } from '../middleware/auth'
 
-const router = Router()
+const router = Router({ mergeParams: true })
 
 router.use(authenticate)
 
-router.post('/:storeId', requireStoreAccess, createCategory)
-router.get('/:storeId', requireStoreAccess, getCategories)
-router.get('/:storeId/:id', requireStoreAccess, getCategory)
-router.patch('/:storeId/:id', requireStoreAccess, updateCategory)
-router.delete('/:storeId/:id', requireStoreAccess, deleteCategory)
+router.post('/', requireStoreAccess, createCategory)
+router.get('/', requireStoreAccess, getCategories)
+router.get('/:id', requireStoreAccess, getCategory)
+router.patch('/:id', requireStoreAccess, updateCategory)
+router.delete('/:id', requireStoreAccess, deleteCategory)
 
 export default router

@@ -9,10 +9,6 @@ import { notFound } from './middleware/not-found'
 // Routes
 import authRoutes from './routes/auth.routes'
 import storeRoutes from './routes/store.routes'
-import productRoutes from './routes/product.routes'
-import categoryRoutes from './routes/category.routes'
-import orderRoutes from './routes/order.routes'
-import customerRoutes from './routes/customer.routes'
 
 const app = express()
 
@@ -34,10 +30,6 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1/stores', storeRoutes)
-app.use('/api/v1/products', productRoutes)
-app.use('/api/v1/categories', categoryRoutes)
-app.use('/api/v1/orders', orderRoutes)
-app.use('/api/v1/customers', customerRoutes)
 
 // Error handling
 app.use(notFound)

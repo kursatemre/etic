@@ -56,9 +56,10 @@ export const CreateCategorySchema = z.object({
   name: MultiLanguageSchema,
   description: MultiLanguageSchema.optional(),
   slug: z.string(),
-  parentId: z.string().optional(),
+  parentId: z.string().nullish(),
   image: z.string().optional(),
-  isVisible: z.boolean().default(true),
+  isVisible: z.boolean().optional().default(true),
+  order: z.number().optional().default(0),
 })
 
 export type CreateCategory = z.infer<typeof CreateCategorySchema>

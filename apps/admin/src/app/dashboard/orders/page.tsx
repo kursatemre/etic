@@ -1,77 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Search, Filter, Download, Eye, MoreVertical } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
-
-const orders = [
-  {
-    id: 'ORD-2024-001',
-    customer: {
-      name: 'Ahmet Yılmaz',
-      email: 'ahmet@email.com',
-    },
-    date: '2024-01-15T10:30:00',
-    total: 1250.00,
-    items: 3,
-    status: 'CONFIRMED',
-    paymentStatus: 'PAID',
-    fulfillmentStatus: 'FULFILLED',
-  },
-  {
-    id: 'ORD-2024-002',
-    customer: {
-      name: 'Ayşe Kaya',
-      email: 'ayse@email.com',
-    },
-    date: '2024-01-15T14:20:00',
-    total: 890.50,
-    items: 2,
-    status: 'PROCESSING',
-    paymentStatus: 'PAID',
-    fulfillmentStatus: 'UNFULFILLED',
-  },
-  {
-    id: 'ORD-2024-003',
-    customer: {
-      name: 'Mehmet Demir',
-      email: 'mehmet@email.com',
-    },
-    date: '2024-01-14T16:45:00',
-    total: 2100.00,
-    items: 5,
-    status: 'SHIPPED',
-    paymentStatus: 'PAID',
-    fulfillmentStatus: 'PARTIALLY_FULFILLED',
-  },
-  {
-    id: 'ORD-2024-004',
-    customer: {
-      name: 'Zeynep Çelik',
-      email: 'zeynep@email.com',
-    },
-    date: '2024-01-14T09:15:00',
-    total: 560.00,
-    items: 1,
-    status: 'PENDING',
-    paymentStatus: 'PENDING',
-    fulfillmentStatus: 'UNFULFILLED',
-  },
-  {
-    id: 'ORD-2024-005',
-    customer: {
-      name: 'Can Arslan',
-      email: 'can@email.com',
-    },
-    date: '2024-01-13T18:30:00',
-    total: 1780.00,
-    items: 4,
-    status: 'DELIVERED',
-    paymentStatus: 'PAID',
-    fulfillmentStatus: 'FULFILLED',
-  },
-]
+import { api } from '@/lib/api'
 
 const getStatusBadge = (status: string, type: 'order' | 'payment' | 'fulfillment') => {
   const statusConfig: Record<string, { color: string; label: string }> = {
@@ -98,17 +31,53 @@ const getStatusBadge = (status: string, type: 'order' | 'payment' | 'fulfillment
 }
 
 export default function OrdersPage() {
+  const [orders, setOrders] = useState<any[]>([])
+  const [storeId, setStoreId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('all')
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const userResponse = await api.me()
+        if (userResponse.success && userResponse.data.stores.length > 0) {
+          const firstStore = userResponse.data.stores[0].store
+          setStoreId(firstStore.id)
+
+          const ordersResponse = await api.getOrders(firstStore.id)
+          if (ordersResponse.success) {
+            setOrders(ordersResponse.data)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching orders:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
   const filteredOrders = orders.filter((order) => {
+    const customerName = `${order.customer?.firstName || ''} ${order.customer?.lastName || ''}`.toLowerCase()
     const matchesSearch =
+      order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = selectedStatus === 'all' || order.status === selectedStatus
+      customerName.includes(searchTerm.toLowerCase()) ||
+      order.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = selectedStatus === 'all' || order.orderStatus === selectedStatus
     return matchesSearch && matchesStatus
   })
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Yükleniyor...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -136,7 +105,7 @@ export default function OrdersPage() {
           <div className="card-body">
             <p className="text-sm text-gray-600">Bekleyen</p>
             <p className="text-2xl font-bold text-yellow-600 mt-1">
-              {orders.filter((o) => o.status === 'PENDING').length}
+              {orders.filter((o) => o.orderStatus === 'PENDING').length}
             </p>
           </div>
         </div>
@@ -144,7 +113,7 @@ export default function OrdersPage() {
           <div className="card-body">
             <p className="text-sm text-gray-600">İşleniyor</p>
             <p className="text-2xl font-bold text-blue-600 mt-1">
-              {orders.filter((o) => o.status === 'PROCESSING' || o.status === 'CONFIRMED').length}
+              {orders.filter((o) => o.orderStatus === 'PROCESSING' || o.orderStatus === 'CONFIRMED').length}
             </p>
           </div>
         </div>
@@ -152,7 +121,7 @@ export default function OrdersPage() {
           <div className="card-body">
             <p className="text-sm text-gray-600">Tamamlanan</p>
             <p className="text-2xl font-bold text-green-600 mt-1">
-              {orders.filter((o) => o.status === 'DELIVERED').length}
+              {orders.filter((o) => o.orderStatus === 'DELIVERED').length}
             </p>
           </div>
         </div>
@@ -245,59 +214,65 @@ export default function OrdersPage() {
                   </td>
                 </tr>
               ) : (
-                filteredOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <input type="checkbox" className="rounded border-gray-300" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        href={`/dashboard/orders/${order.id}`}
-                        className="text-sm font-medium text-primary-600 hover:text-primary-700"
-                      >
-                        {order.id}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{order.customer.name}</p>
-                        <p className="text-xs text-gray-500">{order.customer.email}</p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {formatDate(order.date)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">
-                          {formatCurrency(order.total)}
-                        </p>
-                        <p className="text-xs text-gray-500">{order.items} ürün</p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {getStatusBadge(order.paymentStatus, 'payment')}
-                    </td>
-                    <td className="px-6 py-4">
-                      {getStatusBadge(order.fulfillmentStatus, 'fulfillment')}
-                    </td>
-                    <td className="px-6 py-4">{getStatusBadge(order.status, 'order')}</td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end space-x-2">
+                filteredOrders.map((order) => {
+                  const itemCount = order.items?.length || 0
+                  const customerName = order.customer
+                    ? `${order.customer.firstName || ''} ${order.customer.lastName || ''}`.trim()
+                    : 'Misafir'
+                  return (
+                    <tr key={order.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <input type="checkbox" className="rounded border-gray-300" />
+                      </td>
+                      <td className="px-6 py-4">
                         <Link
                           href={`/dashboard/orders/${order.id}`}
-                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                          title="Görüntüle"
+                          className="text-sm font-medium text-primary-600 hover:text-primary-700"
                         >
-                          <Eye className="w-4 h-4" />
+                          #{order.orderNumber || order.id.slice(0, 8)}
                         </Link>
-                        <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{customerName}</p>
+                          <p className="text-xs text-gray-500">{order.email}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {formatDate(order.createdAt)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {formatCurrency(Number(order.total))}
+                          </p>
+                          <p className="text-xs text-gray-500">{itemCount} ürün</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {getStatusBadge(order.paymentStatus, 'payment')}
+                      </td>
+                      <td className="px-6 py-4">
+                        {getStatusBadge(order.fulfillmentStatus, 'fulfillment')}
+                      </td>
+                      <td className="px-6 py-4">{getStatusBadge(order.orderStatus, 'order')}</td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end space-x-2">
+                          <Link
+                            href={`/dashboard/orders/${order.id}`}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                            title="Görüntüle"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Link>
+                          <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>

@@ -1,14 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Upload, X } from 'lucide-react'
+import { ArrowLeft, Save, Trash2, X } from 'lucide-react'
 import { api } from '@/lib/api'
 
-export default function NewProductPage() {
+export default function EditProductPage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
+  const params = useParams()
+  const productId = params.id as string
+
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [storeId, setStoreId] = useState<string | null>(null)
   const [categories, setCategories] = useState<any[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -33,19 +37,47 @@ export default function NewProductPage() {
           const firstStore = userResponse.data.stores[0].store
           setStoreId(firstStore.id)
 
+          // Fetch categories
           const categoriesResponse = await api.getCategories(firstStore.id)
           if (categoriesResponse.success) {
             setCategories(categoriesResponse.data)
+          }
+
+          // Fetch product
+          const productResponse = await api.getProduct(firstStore.id, productId)
+          if (productResponse.success) {
+            const product = productResponse.data
+            const title = typeof product.title === 'string'
+              ? product.title
+              : (product.title?.tr || product.title?.en || '')
+            const description = typeof product.description === 'string'
+              ? product.description
+              : (product.description?.tr || product.description?.en || '')
+
+            setFormData({
+              title,
+              description,
+              price: product.price.toString(),
+              compareAtPrice: product.compareAtPrice?.toString() || '',
+              sku: product.sku || '',
+              barcode: product.barcode || '',
+              quantity: product.quantity.toString(),
+              categoryIds: product.categories?.map((c: any) => c.categoryId) || [],
+              status: product.status,
+              trackInventory: product.trackInventory,
+            })
           }
         }
       } catch (error) {
         console.error('Error fetching data:', error)
         setError('Veriler yüklenirken hata oluştu')
+      } finally {
+        setLoading(false)
       }
     }
 
     fetchData()
-  }, [])
+  }, [productId])
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -95,7 +127,7 @@ export default function NewProductPage() {
       return
     }
 
-    setLoading(true)
+    setSaving(true)
     setError(null)
 
     try {
@@ -112,23 +144,42 @@ export default function NewProductPage() {
         trackInventory: formData.trackInventory,
         quantity: parseInt(formData.quantity) || 0,
         status: formData.status,
-        categoryIds: formData.categoryIds,
-        images: [],
       }
 
-      await api.createProduct(storeId, productData)
+      await api.updateProduct(storeId, productId, productData)
       router.push('/dashboard/products')
     } catch (error: any) {
-      console.error('Error creating product:', error)
-      setError(error.message || 'Ürün oluşturulurken hata oluştu')
+      console.error('Error updating product:', error)
+      setError(error.message || 'Ürün güncellenirken hata oluştu')
     } finally {
-      setLoading(false)
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!storeId) return
+    if (!confirm('Bu ürünü silmek istediğinizden emin misiniz?')) return
+
+    try {
+      await api.deleteProduct(storeId, productId)
+      router.push('/dashboard/products')
+    } catch (error: any) {
+      console.error('Error deleting product:', error)
+      setError(error.message || 'Ürün silinirken hata oluştu')
     }
   }
 
   const getCategoryName = (category: any) => {
     if (typeof category.name === 'string') return category.name
     return category.name?.tr || category.name?.en || 'Kategori'
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Yükleniyor...</div>
+      </div>
+    )
   }
 
   return (
@@ -150,16 +201,20 @@ export default function NewProductPage() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Yeni Ürün Ekle</h1>
-            <p className="text-gray-600 mt-1">Kataloguna yeni ürün ekle</p>
+            <h1 className="text-2xl font-bold text-gray-900">Ürünü Düzenle</h1>
+            <p className="text-gray-600 mt-1">Ürün bilgilerini güncelle</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
+          <button onClick={handleDelete} className="btn-secondary text-red-600 hover:bg-red-50">
+            <Trash2 className="w-4 h-4 mr-2" />
+            Sil
+          </button>
           <Link href="/dashboard/products" className="btn-secondary">
             İptal
           </Link>
-          <button onClick={handleSubmit} className="btn-primary" disabled={loading}>
-            {loading ? (
+          <button onClick={handleSubmit} className="btn-primary" disabled={saving}>
+            {saving ? (
               <>
                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -170,7 +225,7 @@ export default function NewProductPage() {
             ) : (
               <>
                 <Save className="w-4 h-4 mr-2" />
-                Kaydet
+                Güncelle
               </>
             )}
           </button>
@@ -215,25 +270,6 @@ export default function NewProductPage() {
                   value={formData.description}
                   onChange={handleChange}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Ürününüzün özelliklerini, kullanım alanlarını detaylandırın
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Media */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="text-lg font-semibold">Ürün Görselleri</h2>
-            </div>
-            <div className="card-body">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-primary-500 transition cursor-pointer">
-                <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-sm font-medium text-gray-900 mb-1">
-                  Görselleri sürükleyip bırakın veya tıklayın
-                </p>
-                <p className="text-xs text-gray-500">PNG, JPG, GIF - Max 5MB</p>
               </div>
             </div>
           </div>
@@ -282,7 +318,6 @@ export default function NewProductPage() {
                       onChange={handleChange}
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">İndirim göstermek için</p>
                 </div>
               </div>
             </div>
@@ -352,7 +387,7 @@ export default function NewProductPage() {
                   onChange={handleChange}
                 />
                 <label htmlFor="trackInventory" className="ml-2 text-sm text-gray-700">
-                  Stok takibi yap (stok bittiğinde satışı durdur)
+                  Stok takibi yap
                 </label>
               </div>
             </div>
@@ -377,13 +412,6 @@ export default function NewProductPage() {
                 <option value="ACTIVE">Aktif</option>
                 <option value="ARCHIVED">Arşivlendi</option>
               </select>
-              <p className="text-xs text-gray-500 mt-2">
-                {formData.status === 'ACTIVE'
-                  ? 'Ürün mağazanızda görünür olacak'
-                  : formData.status === 'DRAFT'
-                  ? 'Ürün sadece admin panelde görünür'
-                  : 'Ürün arşivlendi'}
-              </p>
             </div>
           </div>
 

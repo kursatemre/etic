@@ -7,13 +7,13 @@ import {
 } from '../controllers/customer.controller'
 import { authenticate, requireStoreAccess } from '../middleware/auth'
 
-const router = Router()
+const router = Router({ mergeParams: true })
 
 router.use(authenticate)
 
-router.post('/:storeId', requireStoreAccess, createCustomer)
-router.get('/:storeId', requireStoreAccess, getCustomers)
-router.get('/:storeId/:id', requireStoreAccess, getCustomer)
-router.patch('/:storeId/:id', requireStoreAccess, updateCustomer)
+router.post('/', requireStoreAccess, createCustomer)
+router.get('/', requireStoreAccess, getCustomers)
+router.get('/:id', requireStoreAccess, getCustomer)
+router.patch('/:id', requireStoreAccess, updateCustomer)
 
 export default router
