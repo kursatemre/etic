@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ArrowLeft, ShoppingCart, Minus, Plus, Package, Truck, Shield } from 'lucide-react'
 import { storefrontApi } from '@/lib/api'
 import { formatCurrency, getMultiLanguageValue } from '@/lib/utils'
+import { useCart } from '@/contexts/CartContext'
 
 // Hardcoded store ID for demo
 const STORE_ID = 'cmi6ofmxy00019bufyhxwyudy'

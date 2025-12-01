@@ -18,27 +18,39 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { api } from '@/lib/api'
 
 const getStatusBadge = (status: string, type: 'order' | 'payment' | 'fulfillment') => {
-  const statusConfig: Record<string, { color: string; label: string }> = {
-    // Order Status
+  const orderStatusConfig: Record<string, { color: string; label: string }> = {
     PENDING: { color: 'badge-warning', label: 'Beklemede' },
     CONFIRMED: { color: 'badge-info', label: 'Onaylandı' },
     PROCESSING: { color: 'badge-info', label: 'İşleniyor' },
     SHIPPED: { color: 'badge-info', label: 'Kargoda' },
     DELIVERED: { color: 'badge-success', label: 'Teslim Edildi' },
     CANCELLED: { color: 'badge-danger', label: 'İptal' },
-    // Payment Status
+    REFUNDED: { color: 'badge-danger', label: 'İade Edildi' },
+  }
+
+  const paymentStatusConfig: Record<string, { color: string; label: string }> = {
     PAID: { color: 'badge-success', label: 'Ödendi' },
     PENDING: { color: 'badge-warning', label: 'Bekliyor' },
     PARTIALLY_PAID: { color: 'badge-warning', label: 'Kısmi Ödendi' },
+    PARTIALLY_REFUNDED: { color: 'badge-warning', label: 'Kısmi İade' },
     REFUNDED: { color: 'badge-danger', label: 'İade Edildi' },
     FAILED: { color: 'badge-danger', label: 'Başarısız' },
-    // Fulfillment Status
+  }
+
+  const fulfillmentStatusConfig: Record<string, { color: string; label: string }> = {
     UNFULFILLED: { color: 'badge-warning', label: 'Hazırlanıyor' },
     PARTIALLY_FULFILLED: { color: 'badge-warning', label: 'Kısmi Teslim' },
     FULFILLED: { color: 'badge-success', label: 'Tamamlandı' },
+    CANCELLED: { color: 'badge-danger', label: 'İptal' },
   }
 
-  const config = statusConfig[status] || { color: 'badge-info', label: status }
+  const configMap = {
+    order: orderStatusConfig,
+    payment: paymentStatusConfig,
+    fulfillment: fulfillmentStatusConfig,
+  }
+
+  const config = configMap[type][status] || { color: 'badge-info', label: status }
   return <span className={`badge ${config.color}`}>{config.label}</span>
 }
 

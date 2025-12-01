@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Search, Filter, ShoppingCart } from 'lucide-react'
 import { storefrontApi } from '@/lib/api'
 import { formatCurrency, getMultiLanguageValue } from '@/lib/utils'
+import { useCart } from '@/contexts/CartContext'
 
 // Hardcoded store ID for demo - in production this would come from domain/subdomain
 const STORE_ID = 'cmi6ofmxy00019bufyhxwyudy'
@@ -15,6 +16,7 @@ export default function ShopPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const { addItem, totalItems } = useCart()
 
   useEffect(() => {
     fetchData()
@@ -70,12 +72,14 @@ export default function ShopPage() {
               <Link href="/shop" className="text-gray-700 hover:text-primary-600">
                 Ürünler
               </Link>
-              <button className="relative p-2 text-gray-700 hover:text-primary-600">
+              <Link href="/cart" className="relative p-2 text-gray-700 hover:text-primary-600">
                 <ShoppingCart className="w-6 h-6" />
-                <span className="absolute -top-1 -right-1 bg-primary-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  0
-                </span>
-              </button>
+                {totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {totalItems}
+                  </span>
+                )}
+              </Link>
             </div>
           </div>
         </div>
@@ -167,40 +171,45 @@ export default function ShopPage() {
                     ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
                     : 0
 
+                  const inStock = !product.trackInventory || product.quantity > 0
+
                   return (
-                    <Link
+                    <div
                       key={product.id}
-                      href={`/shop/${product.slug}`}
                       className="group bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition"
                     >
-                      <div className="relative aspect-square bg-gray-100">
-                        {hasDiscount && (
-                          <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10">
-                            %{discountPercentage}
-                          </span>
-                        )}
-                        {image && (
-                          <img
-                            src={image}
-                            alt={title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        )}
-                        {!product.quantity && product.trackInventory && (
-                          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                            <span className="bg-white text-gray-900 px-4 py-2 rounded-lg font-medium">
-                              Stokta Yok
+                      <Link href={`/shop/${product.slug}`}>
+                        <div className="relative aspect-square bg-gray-100">
+                          {hasDiscount && (
+                            <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10">
+                              %{discountPercentage}
                             </span>
-                          </div>
-                        )}
-                      </div>
+                          )}
+                          {image && (
+                            <img
+                              src={image}
+                              alt={title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          )}
+                          {!inStock && (
+                            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                              <span className="bg-white text-gray-900 px-4 py-2 rounded-lg font-medium">
+                                Stokta Yok
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </Link>
                       <div className="p-4">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2 group-hover:text-primary-600">
-                          {title}
-                        </h3>
-                        {description && (
-                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">{description}</p>
-                        )}
+                        <Link href={`/shop/${product.slug}`}>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2 group-hover:text-primary-600">
+                            {title}
+                          </h3>
+                          {description && (
+                            <p className="text-sm text-gray-600 mb-3 line-clamp-2">{description}</p>
+                          )}
+                        </Link>
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-xl font-bold text-gray-900">
@@ -212,12 +221,32 @@ export default function ShopPage() {
                               </p>
                             )}
                           </div>
-                          <button className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition">
-                            Sepete Ekle
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              if (inStock) {
+                                addItem({
+                                  id: product.id,
+                                  productId: product.id,
+                                  title,
+                                  slug: product.slug,
+                                  price: Number(product.price),
+                                  compareAtPrice: product.compareAtPrice
+                                    ? Number(product.compareAtPrice)
+                                    : undefined,
+                                  image,
+                                  maxQuantity: product.trackInventory ? product.quantity : undefined,
+                                })
+                              }
+                            }}
+                            disabled={!inStock}
+                            className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+                          >
+                            {inStock ? 'Sepete Ekle' : 'Stokta Yok'}
                           </button>
                         </div>
                       </div>
-                    </Link>
+                    </div>
                   )
                 })}
               </div>
